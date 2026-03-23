@@ -1,9 +1,28 @@
-# Arquivos
+# Arquivos gerados
 *.xlsx
 *.csv
 
-# Pastas
+# Pastas locais / Exportações
 ecc/
+arquivos/
 arquvos/
 export/
+
+# Python / Ambientes Virtuais
 __pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+.env
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# OS
+.DS_Store
+Thumbs.db
