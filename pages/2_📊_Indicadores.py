@@ -12,17 +12,10 @@ if df_encontreiros is not None:
     st.subheader("📌 Inscrições (Encontreiros)")
     indicadores = obter_indicadores_principais(df_encontreiros)
     
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2, col3 = st.columns(3)
     col1.metric("Total Inscritos", indicadores['total_inscricoes'])
-    col2.metric("Confirmados (Ok)", indicadores['confirmados'])
+    col2.metric("Confirmados", indicadores['confirmados'])
     col3.metric("Pendentes", indicadores['pendentes'])
-    col4.metric("Atrasados", indicadores['atrasados'])
-    col5.metric("Cancelados", indicadores['cancelados'])
-    
-    st.divider()
-    
-    st.markdown("### Prévia Rápida dos Dados")
-    st.dataframe(df_encontreiros.head(10))
     
 else:
     st.warning("Nenhum dado de Encontreiros importado. Volte à página de 'Importação e Relatórios' e anexe o '.csv' para visualizar os indicadores.")
@@ -32,5 +25,9 @@ st.divider()
 df_encontristas = st.session_state.get('df_encontristas', None)
 if df_encontristas is not None:
     st.subheader("📌 Inscrições (Encontristas)")
-    st.metric("Total Encontristas", len(df_encontristas))
-    st.dataframe(df_encontristas.head(10))
+    indicadores_encontristas = obter_indicadores_principais(df_encontristas)
+    
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total Inscritos", indicadores_encontristas['total_inscricoes'])
+    col2.metric("Confirmados", indicadores_encontristas['confirmados'])
+    col3.metric("Pendentes", indicadores_encontristas['pendentes'])
