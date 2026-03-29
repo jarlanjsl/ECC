@@ -69,12 +69,13 @@ def gerar_camisas_encontristas(df_encontristas):
     
     lista_camisas = pd.concat([camisas_ele, camisas_ela], ignore_index=True)
     lista_camisas = lista_camisas.sort_values(by='TAMANHO', ascending=True)
-    resumo_camisas = lista_camisas['TAMANHO'].value_counts()
+    resumo_camisas = lista_camisas['TAMANHO'].value_counts().reset_index()
+    resumo_camisas.columns = ['TAMANHO', 'count']
     
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         escrever_tabela_formatada(writer, 'Lista', lista_camisas, 'Encontristas', 'Lista de Camisas')
-        escrever_tabela_formatada(writer, 'Resumo', resumo_camisas.reset_index(), 'Encontristas', 'Resumo das Camisas')
+        escrever_tabela_formatada(writer, 'Resumo', resumo_camisas, 'Encontristas', 'Resumo das Camisas')
         escrever_tabela_formatada(writer, 'Lista Casais', lista_camisas_casal, 'Encontristas', 'Lista de Camisas por Casal')
     
     output.seek(0)
