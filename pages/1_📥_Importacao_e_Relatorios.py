@@ -4,7 +4,42 @@ from src.encontreiros_utils import *
 from src.encontristas_utils import *
 
 st.set_page_config(page_title="Relatórios - ECC", layout="wide")
+
+import src.auth as auth
+if not auth.check_password():
+    st.stop()
+
 st.title("📥 Importação e Geração de Relatórios")
+
+with st.expander("Sincronização Online (🤖 Robô E-Inscrição)", expanded=True):
+    st.write("Selecione qual pacote de dados o sistema deve extrair rodando diretamente no painel oficial:")
+    
+    # Criando 3 colunas para colocar os botões lado-a-lado
+    colA, colB, colC = st.columns(3)
+    
+    def executa_sincronizacao(tipo_bot, chave_tabela):
+        if "einscricao_email" in st.secrets and "einscricao_senha" in st.secrets:
+            from src.extrator_bot import extrair_dados_einscricao
+            with st.spinner(f"Rodando Automação para {tipo_bot.upper()}... Olhe a aba do robô!"):
+                df = extrair_dados_einscricao(st.secrets["einscricao_email"], st.secrets["einscricao_senha"], tipo_bot)
+                
+                if df is not None:
+                    st.session_state[chave_tabela] = df
+                    st.success(f"Tabela de {tipo_bot.upper()} interceptada com maestria!")
+                else:
+                    st.error(f"Erro ou cancelamento do download da lista de {tipo_bot}. Veja o log ou a janela.")
+        else:
+            st.warning("⚠️ Suas chaves secretas einscricao_email e einscricao_senha sumiram!")
+            
+    with colA:
+        if st.button("⏬ Sincronizar Encontreiros"):
+            executa_sincronizacao("encontreiros", "df_encontreiros")
+    with colB:
+        if st.button("⏬ Sincronizar Encontristas"):
+            executa_sincronizacao("encontristas", "df_encontristas")
+    with colC:
+        if st.button("⏬ Banco / Financeiro"):
+            executa_sincronizacao("financeiro", "df_financeiro")
 
 aba1, aba2 = st.tabs(["Encontreiros", "Encontristas"])
 
@@ -19,11 +54,17 @@ with aba1:
     with col3:
         file_sorteados = st.file_uploader("Sorteados (CSV) - Opcional", type=['csv'], key='f_sorteados')
 
-    if file_encontreiros is not None:
+    df_inscricoes = st.session_state.get('df_encontreiros', None)
+    if df_inscricoes is None and file_encontreiros is not None:
         try:
             df_inscricoes = pd.read_csv(file_encontreiros, sep=';', encoding='latin-1')
             st.session_state['df_encontreiros'] = df_inscricoes
-            st.success("Tabela de inscrições carregada com sucesso!")
+        except Exception as e:
+            st.error(f"Erro no CSV de Encontreiros: {e}")
+
+    if df_inscricoes is not None:
+        try:
+            st.success("Tabela de inscrições de Encontreiros carregada com sucesso!")
             
             st.subheader("Relatórios Disponíveis")
             b_col1, b_col2, b_col3 = st.columns(3)
@@ -48,9 +89,12 @@ with aba1:
                     file_name="analise_por_igreja.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
 
-            if file_financeiro is not None:
+            df_financeiro = st.session_state.get('df_financeiro', None)
+            if df_financeiro is None and file_financeiro is not None:
                 df_financeiro = pd.read_csv(file_financeiro, sep=';', on_bad_lines='skip')
                 st.session_state['df_financeiro'] = df_financeiro
+                
+            if df_financeiro is not None:
                 
                 df_sort = None
                 if file_sorteados is not None:
@@ -76,11 +120,17 @@ with aba2:
     st.header("Upload de Arquivos - Encontristas")
     file_encontristas = st.file_uploader("Encontristas (CSV)", type=['csv'], key='f_encontristas')
     
-    if file_encontristas is not None:
+    df_encontristas = st.session_state.get('df_encontristas', None)
+    if df_encontristas is None and file_encontristas is not None:
         try:
             df_encontristas = pd.read_csv(file_encontristas, sep=';', encoding='latin-1')
             st.session_state['df_encontristas'] = df_encontristas
-            st.success("Tabela de encontristas carregada com sucesso!")
+        except Exception as e:
+            st.error(f"Erro no CSV de Encontristas: {e}")
+
+    if df_encontristas is not None:
+        try:
+            st.success("Tabela de Encontristas carregada com sucesso!")
             
             st.subheader("Relatórios Disponíveis")
             b_col1, b_col2 = st.columns(2)

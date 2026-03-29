@@ -3,3 +3,4 @@ ipykernel
 openpyxl
 xlsxwriter
 streamlit
+playwright

@@ -8,6 +8,7 @@ arquivos/
 arquvos/
 export/
 .vscode/
+.streamlit/
 
 # Python / Ambientes Virtuais
 __pycache__/
@@ -27,3 +28,7 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# Playwright Automacao Web Scraping
+.playwright_session/
+.playwright_session
