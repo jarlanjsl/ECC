@@ -7,6 +7,7 @@ ecc/
 arquivos/
 arquvos/
 export/
+.vscode/
 
 # Python / Ambientes Virtuais
 __pycache__/
