@@ -20,7 +20,7 @@ with st.expander("Sincronização Online (🤖 Robô E-Inscrição)", expanded=T
     def executa_sincronizacao(tipo_bot, chave_tabela):
         if "einscricao_email" in st.secrets and "einscricao_senha" in st.secrets:
             from src.extrator_bot import extrair_dados_einscricao
-            with st.spinner(f"Rodando Automação para {tipo_bot.upper()}... Olhe a aba do robô!"):
+            with st.spinner(f"Rodando Automação para {tipo_bot.upper()}... Aguarde!"):
                 df = extrair_dados_einscricao(st.secrets["einscricao_email"], st.secrets["einscricao_senha"], tipo_bot)
                 
                 if df is not None:
@@ -91,7 +91,7 @@ with aba1:
 
             df_financeiro = st.session_state.get('df_financeiro', None)
             if df_financeiro is None and file_financeiro is not None:
-                df_financeiro = pd.read_csv(file_financeiro, sep=';', on_bad_lines='skip')
+                df_financeiro = pd.read_csv(file_financeiro, sep=';', encoding='utf-8-sig', on_bad_lines='skip')
                 st.session_state['df_financeiro'] = df_financeiro
                 
             if df_financeiro is not None:
@@ -115,7 +115,8 @@ with aba1:
 
         except Exception as e:
             st.error(f"Erro ao processar arquivo(s): {e}")
-
+            if df_financeiro is not None:
+                st.write("Colunas encontradas no arquivo Financeiro:", list(df_financeiro.columns))
 with aba2:
     st.header("Upload de Arquivos - Encontristas")
     file_encontristas = st.file_uploader("Encontristas (CSV)", type=['csv'], key='f_encontristas')
