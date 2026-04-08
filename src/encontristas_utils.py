@@ -2,6 +2,9 @@ import pandas as pd
 import io
 
 def gerar_lista_encontristas(df_encontristas):
+    if 'Cancelada?' in df_encontristas.columns:
+        df_encontristas = df_encontristas[df_encontristas['Cancelada?'] == 'Não']
+        
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df_encontristas.to_excel(writer, index=False, sheet_name='Encontristas')
@@ -9,6 +12,9 @@ def gerar_lista_encontristas(df_encontristas):
     return output.getvalue()
 
 def gerar_endereco_encontristas(df_encontristas):
+    if 'Cancelada?' in df_encontristas.columns:
+        df_encontristas = df_encontristas[df_encontristas['Cancelada?'] == 'Não']
+        
     localizacao = df_encontristas[['Nome', 'Status', 'Nome (Ele):', 'Telefone (Ele):', 'Nome (Ela):', 'Telefone (Ela):', 'Endereço:', 'Número da ficha:']].copy()
     localizacao.columns = ['Responsavel', 'Status', 'Nome (Ele)', 'Telefone (Ele)', 'Nome (Ela)', 'Telefone (Ela)', 'Endereço', 'Numero ficha']
     
@@ -47,6 +53,9 @@ def escrever_tabela_formatada(writer, sheet_name, df, titulo1, titulo2, startrow
     return worksheet
 
 def gerar_camisas_encontristas(df_encontristas):
+    if 'Cancelada?' in df_encontristas.columns:
+        df_encontristas = df_encontristas[df_encontristas['Cancelada?'] == 'Não']
+        
     # Lista Camisas Casal
     camisas = df_encontristas[['Como Gostaria de ser chamado? ', 'Tamanho Camisa (Ele):', 'Como Gostaria de ser chamada?', 'Tamanho Camisa (Ela):']].copy()
     camisas.columns = ['ELE', 'CAMISA ELE', 'ELA', 'CAMISA ELA']
