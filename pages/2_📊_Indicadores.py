@@ -3,6 +3,11 @@ import pandas as pd
 from src.dashboard_utils import obter_indicadores_principais
 
 st.set_page_config(page_title="Dashboard - ECC", layout="wide")
+
+import src.auth as auth
+if not auth.check_password():
+    st.stop()
+
 st.title("📊 Indicadores do ECC")
 
 # Check if data exists in memory

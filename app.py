@@ -2,6 +2,10 @@ import streamlit as st
 
 st.set_page_config(page_title="Sistema ECC", page_icon="⛪", layout="wide")
 
+import src.auth as auth
+if not auth.check_password():
+    st.stop()
+
 st.title("Sistema de Gestão - ECC")
 st.write("Bem-vindo ao portal unificado para o gerenciamento do ECC.")
 st.write("Utilize o menu da esquerda para navegar pelo aplicativo:")
