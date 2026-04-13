@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from datetime import datetime
 from src.encontreiros_utils import *
 from src.encontristas_utils import *
 
@@ -12,34 +13,40 @@ if not auth.check_password():
 st.title("📥 Importação e Geração de Relatórios")
 
 with st.expander("Sincronização Online (🤖 Robô E-Inscrição)", expanded=True):
-    st.write("Selecione qual pacote de dados o sistema deve extrair rodando diretamente no painel oficial:")
+    st.write("Acione o robô para baixar automaticamente Encontreiros, Encontristas e Financeiro:")
     
-    # Criando 3 colunas para colocar os botões lado-a-lado
-    colA, colB, colC = st.columns(3)
-    
-    def executa_sincronizacao(tipo_bot, chave_tabela):
+    def executa_sincronizacao_total():
         if "einscricao_email" in st.secrets and "einscricao_senha" in st.secrets:
-            from src.extrator_bot import extrair_dados_einscricao
-            with st.spinner(f"Rodando Automação para {tipo_bot.upper()}... Aguarde!"):
-                df = extrair_dados_einscricao(st.secrets["einscricao_email"], st.secrets["einscricao_senha"], tipo_bot)
+            from src.extrator_bot import extrair_todos_dados_einscricao
+            with st.spinner("Rodando Automação para sincronização global... Aguarde!"):
+                resultado = extrair_todos_dados_einscricao(st.secrets["einscricao_email"], st.secrets["einscricao_senha"])
                 
-                if df is not None:
-                    st.session_state[chave_tabela] = df
-                    st.success(f"Tabela de {tipo_bot.upper()} interceptada com maestria!")
+                if resultado:
+                    if resultado["encontreiros"] is not None:
+                        st.session_state["df_encontreiros"] = resultado["encontreiros"]
+                    if resultado["encontristas"] is not None:
+                        st.session_state["df_encontristas"] = resultado["encontristas"]
+                    if resultado["financeiro"] is not None:
+                        st.session_state["df_financeiro"] = resultado["financeiro"]
+                        
+                    st.success("Bases de dados sincronizadas com sucesso!")
                 else:
-                    st.error(f"Erro ou cancelamento do download da lista de {tipo_bot}. Veja o log ou a janela.")
+                    st.error("Falha geral ao sincronizar dados. Inspecione o terminal e os logs.")
         else:
             st.warning("⚠️ Suas chaves secretas einscricao_email e einscricao_senha sumiram!")
             
-    with colA:
-        if st.button("⏬ Sincronizar Encontreiros"):
-            executa_sincronizacao("encontreiros", "df_encontreiros")
-    with colB:
-        if st.button("⏬ Sincronizar Encontristas"):
-            executa_sincronizacao("encontristas", "df_encontristas")
-    with colC:
-        if st.button("⏬ Banco / Financeiro"):
-            executa_sincronizacao("financeiro", "df_financeiro")
+    if st.button("⏬ Sincronizar Tudo", use_container_width=True):
+        executa_sincronizacao_total()
+        
+st.divider()
+col_fmt1, col_fmt2 = st.columns([1, 3])
+with col_fmt1:
+    formato_saida = st.radio("Formato de Exportação:", options=["Excel", "PDF"])
+
+formato_str = "pdf" if formato_saida == "PDF" else "excel"
+extensao = ".pdf" if formato_str == "pdf" else ".xlsx"
+mime_type = "application/pdf" if formato_str == "pdf" else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+agora = datetime.now().strftime("%d%m%Y_%H%M")
 
 aba1, aba2 = st.tabs(["Encontreiros", "Encontristas"])
 
@@ -55,12 +62,25 @@ with aba1:
         file_sorteados = st.file_uploader("Sorteados (CSV) - Opcional", type=['csv'], key='f_sorteados')
 
     df_inscricoes = st.session_state.get('df_encontreiros', None)
+    df_financeiro = st.session_state.get('df_financeiro', None)
+    df_sort = None
+    
     if df_inscricoes is None and file_encontreiros is not None:
         try:
             df_inscricoes = pd.read_csv(file_encontreiros, sep=';', encoding='latin-1')
             st.session_state['df_encontreiros'] = df_inscricoes
         except Exception as e:
             st.error(f"Erro no CSV de Encontreiros: {e}")
+
+    if df_financeiro is None and file_financeiro is not None:
+        try:
+            df_financeiro = pd.read_csv(file_financeiro, sep=';', encoding='utf-8-sig', on_bad_lines='skip')
+            st.session_state['df_financeiro'] = df_financeiro
+        except Exception as e:
+            st.error(f"Erro no CSV de Financeiro: {e}")
+            
+    if file_sorteados is not None:
+        df_sort = pd.read_csv(file_sorteados, sep=';')
 
     if df_inscricoes is not None:
         try:
@@ -70,47 +90,37 @@ with aba1:
             b_col1, b_col2, b_col3 = st.columns(3)
             
             with b_col1:
-                excel_equipes = gerar_lista_equipes(df_inscricoes)
+                dados_equipes = gerar_lista_equipes(df_inscricoes, formato=formato_str)
                 st.download_button(
-                    label="Baixar Lista de Equipes", data=excel_equipes,
-                    file_name="lista_equipes.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    label=f"Baixar Lista de Equipes", data=dados_equipes,
+                    file_name=f"lista_equipes_{agora}{extensao}", mime=mime_type
                 )
                 
-                excel_camisas = gerar_todas_camisas(df_inscricoes)
+                dados_camisas = gerar_todas_camisas(df_inscricoes, formato=formato_str)
                 st.download_button(
-                    label="Baixar Lista de Camisas", data=excel_camisas,
-                    file_name="encontreiros_camisas.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    label=f"Baixar Lista de Camisas", data=dados_camisas,
+                    file_name=f"encontreiros_camisas_{agora}{extensao}", mime=mime_type
                 )
             
             with b_col2:
-                excel_igrejas = gerar_analise_igrejas(df_inscricoes)
+                dados_igrejas = gerar_analise_igrejas(df_inscricoes, formato=formato_str)
                 st.download_button(
-                    label="Baixar Análise de Igrejas", data=excel_igrejas,
-                    file_name="analise_por_igreja.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    label=f"Baixar Análise de Igrejas", data=dados_igrejas,
+                    file_name=f"analise_por_igreja_{agora}{extensao}", mime=mime_type
                 )
-
-            df_financeiro = st.session_state.get('df_financeiro', None)
-            if df_financeiro is None and file_financeiro is not None:
-                df_financeiro = pd.read_csv(file_financeiro, sep=';', encoding='utf-8-sig', on_bad_lines='skip')
-                st.session_state['df_financeiro'] = df_financeiro
                 
             if df_financeiro is not None:
-                
-                df_sort = None
-                if file_sorteados is not None:
-                    df_sort = pd.read_csv(file_sorteados, sep=';')
-                
                 with b_col3:
-                    excel_pagamento = gerar_relacao_pagamento(df_financeiro)
+                    dados_pagamento = gerar_relacao_pagamento(df_financeiro, formato=formato_str)
                     st.download_button(
-                        label="Baixar Relação de Pagamento", data=excel_pagamento,
-                        file_name="relacao_pagamento.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        label=f"Baixar Relação de Pagamento", data=dados_pagamento,
+                        file_name=f"relacao_pagamento_{agora}{extensao}", mime=mime_type
                     )
                     
-                    excel_sorteio = gerar_lista_sorteio(df_inscricoes, df_financeiro, df_sort)
+                    dados_sorteio = gerar_lista_sorteio(df_inscricoes, df_financeiro, df_sort, formato=formato_str)
                     st.download_button(
-                        label="Baixar Lista de Sorteio", data=excel_sorteio,
-                        file_name="lista_sorteio.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        label=f"Baixar Lista de Sorteio", data=dados_sorteio,
+                        file_name=f"lista_sorteio_{agora}{extensao}", mime=mime_type
                     )
 
         except Exception as e:
@@ -137,23 +147,29 @@ with aba2:
             b_col1, b_col2 = st.columns(2)
             
             with b_col1:
-                excel_lista = gerar_lista_encontristas(df_encontristas)
+                dados_lista_ent = gerar_lista_encontristas(df_encontristas, formato=formato_str)
                 st.download_button(
-                    label="Baixar Lista Encontristas", data=excel_lista,
-                    file_name="lista_encontristas.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    label=f"Baixar Lista Encontristas", data=dados_lista_ent,
+                    file_name=f"lista_encontristas_{agora}{extensao}", mime=mime_type
                 )
                 
-                excel_endereco = gerar_endereco_encontristas(df_encontristas)
+                dados_endereco = gerar_endereco_encontristas(df_encontristas, formato=formato_str)
                 st.download_button(
-                    label="Baixar Endereços", data=excel_endereco,
-                    file_name="endereco_encontristas.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    label=f"Baixar Endereços", data=dados_endereco,
+                    file_name=f"endereco_encontristas_{agora}{extensao}", mime=mime_type
                 )
                 
             with b_col2:
-                excel_camisas_ent = gerar_camisas_encontristas(df_encontristas)
+                dados_camisas_ent = gerar_camisas_encontristas(df_encontristas, formato=formato_str)
                 st.download_button(
-                    label="Baixar Camisas Encontristas", data=excel_camisas_ent,
-                    file_name="encontristas_camisas.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    label=f"Baixar Camisas Encontristas", data=dados_camisas_ent,
+                    file_name=f"encontristas_camisas_{agora}{extensao}", mime=mime_type
+                )
+                
+                dados_circulos = gerar_lista_circulos_encontristas(df_encontristas, formato=formato_str)
+                st.download_button(
+                    label=f"Baixar Lista para Círculos", data=dados_circulos,
+                    file_name=f"circulos_encontristas_{agora}{extensao}", mime=mime_type
                 )
                 
         except Exception as e:

@@ -1,11 +1,11 @@
 import pandas as pd
 import io
-
+from src.pdf_utils import dataframe_to_pdf
 def filtrar_ativos(df_inscricoes):
     filtro = df_inscricoes['Cancelada?'] == 'Não'
     return df_inscricoes[filtro]
 
-def gerar_lista_equipes(df_inscricoes):
+def gerar_lista_equipes(df_inscricoes, formato='excel'):
     df_filtrado = filtrar_ativos(df_inscricoes).copy()
     
     equipes = df_filtrado[['Nome Crachá (Ele):', 'Telefone (Ele)', 'Nome Crachá (Ela):', 'Telefone (Ela)', 'Em qual equipe deseja trabalhar :', 'Data da inscrição']].copy()
@@ -16,9 +16,12 @@ def gerar_lista_equipes(df_inscricoes):
     
     lista_equipes = equipes.sort_values(by=['EQUIPE', 'DATA INSCRIÇÃO'])
     
+    if formato == 'pdf':
+        return dataframe_to_pdf(lista_equipes, 'Encontreiros', 'Lista de Equipes')
+    
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        lista_equipes.to_excel(writer, index=False, sheet_name='Equipes')
+        escrever_tabela_formatada(writer, 'Equipes', lista_equipes, 'Encontreiros', 'Lista de Equipes')
     output.seek(0)
     return output.getvalue()
 
@@ -46,11 +49,13 @@ def escrever_tabela_formatada(writer, sheet_name, df, titulo1, titulo2, startrow
     for col_idx, col in enumerate(df.columns):
         max_len = len(str(col))
         if nlinhas > 0:
-            max_len = max(max_len, *(df[col].astype(str).map(len)))
+            col_max = df.iloc[:, col_idx].astype(str).str.len().max()
+            if pd.notna(col_max):
+                max_len = max(max_len, int(col_max))
         worksheet.set_column(col_idx, col_idx, max_len + 2)
     return worksheet
 
-def gerar_todas_camisas(df_inscricoes):
+def gerar_todas_camisas(df_inscricoes, formato='excel'):
     df_filtrado = filtrar_ativos(df_inscricoes).copy()
     
     # 1. Lista Camisas Casal
@@ -78,6 +83,13 @@ def gerar_todas_camisas(df_inscricoes):
     resumo_camisas = lista_camisas['TAMANHO'].value_counts().reset_index()
     resumo_camisas.columns = ['TAMANHO', 'count']
     
+    if formato == 'pdf':
+        return dataframe_to_pdf([
+            ('Lista de Camisas', lista_camisas),
+            ('Resumo das Camisas', resumo_camisas),
+            ('Lista de Camisas por Casal', lista_camisas_casal)
+        ], 'Encontreiros')
+    
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         escrever_tabela_formatada(writer, 'Lista', lista_camisas, 'Encontreiros', 'Lista de Camisas')
@@ -87,7 +99,7 @@ def gerar_todas_camisas(df_inscricoes):
     output.seek(0)
     return output.getvalue()
 
-def gerar_relacao_pagamento(df_financeiro):
+def gerar_relacao_pagamento(df_financeiro, formato='excel'):
     filtro_financeiro = df_financeiro['Tipo'] == 'C'
     df_filtrado_financeiro = df_financeiro[filtro_financeiro].copy()
     
@@ -97,13 +109,16 @@ def gerar_relacao_pagamento(df_financeiro):
     pagamento['DATA'] = pd.to_datetime(pagamento['DATA'], dayfirst=True)
     relacao_pagamento = pagamento.sort_values(by='DATA')
     
+    if formato == 'pdf':
+        return dataframe_to_pdf(relacao_pagamento, 'Financeiro', 'Relação de Pagamentos')
+    
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        relacao_pagamento.to_excel(writer, index=False, sheet_name='Pagamentos')
+        escrever_tabela_formatada(writer, 'Pagamentos', relacao_pagamento, 'Financeiro', 'Relação de Pagamentos')
     output.seek(0)
     return output.getvalue()
 
-def gerar_lista_sorteio(df_inscricoes, df_financeiro, df_sorteados):
+def gerar_lista_sorteio(df_inscricoes, df_financeiro, df_sorteados, formato='excel'):
     df_filtrado = filtrar_ativos(df_inscricoes).copy()
     df_filtrado_financeiro = df_financeiro[df_financeiro['Tipo'] == 'C'].copy()
     
@@ -145,21 +160,27 @@ def gerar_lista_sorteio(df_inscricoes, df_financeiro, df_sorteados):
         
     lista_final_disponivel.drop(columns=['NOME_COMPARA'], inplace=True, errors='ignore')
     
+    if formato == 'pdf':
+        return dataframe_to_pdf(lista_final_disponivel, 'Eventos', 'Lista para Sorteio')
+    
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        lista_final_disponivel.to_excel(writer, index=False, sheet_name='Sorteio')
+        escrever_tabela_formatada(writer, 'Sorteio', lista_final_disponivel, 'Eventos', 'Lista para Sorteio')
     output.seek(0)
     return output.getvalue()
 
-def gerar_analise_igrejas(df_inscricoes):
+def gerar_analise_igrejas(df_inscricoes, formato='excel'):
     df_filtrado = filtrar_ativos(df_inscricoes).copy()
     df_filtrado['Igreja em que congregam:'] = df_filtrado['Igreja em que congregam:'].astype(str).str.strip().str.title()
     analise_igreja = df_filtrado['Igreja em que congregam:'].value_counts().reset_index()
     analise_igreja.columns = ['IGREJA', 'QUANTIDADE DE CASAIS']
     analise_igreja = analise_igreja.sort_values(by='QUANTIDADE DE CASAIS', ascending=False)
     
+    if formato == 'pdf':
+        return dataframe_to_pdf(analise_igreja, 'Encontreiros', 'Análise por Igrejas')
+    
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        analise_igreja.to_excel(writer, index=False, sheet_name='Analise_Igrejas')
+        escrever_tabela_formatada(writer, 'Analise_Igrejas', analise_igreja, 'Encontreiros', 'Análise por Igrejas')
     output.seek(0)
     return output.getvalue()

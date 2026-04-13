@@ -1,26 +1,36 @@
 import pandas as pd
 import io
-
-def gerar_lista_encontristas(df_encontristas):
+from src.pdf_utils import dataframe_to_pdf
+def gerar_lista_encontristas(df_encontristas, formato='excel'):
     if 'Cancelada?' in df_encontristas.columns:
         df_encontristas = df_encontristas[df_encontristas['Cancelada?'] == 'Não']
         
+    if formato == 'pdf':
+        return dataframe_to_pdf(df_encontristas, 'Encontristas', 'Lista de Encontristas')
+        
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df_encontristas.to_excel(writer, index=False, sheet_name='Encontristas')
+        escrever_tabela_formatada(writer, 'Encontristas', df_encontristas, 'Encontristas', 'Lista de Encontristas')
     output.seek(0)
     return output.getvalue()
 
-def gerar_endereco_encontristas(df_encontristas):
+def gerar_endereco_encontristas(df_encontristas, formato='excel'):
     if 'Cancelada?' in df_encontristas.columns:
         df_encontristas = df_encontristas[df_encontristas['Cancelada?'] == 'Não']
         
     localizacao = df_encontristas[['Nome', 'Status', 'Nome (Ele):', 'Telefone (Ele):', 'Nome (Ela):', 'Telefone (Ela):', 'Endereço:', 'Número da ficha:']].copy()
     localizacao.columns = ['Responsavel', 'Status', 'Nome (Ele)', 'Telefone (Ele)', 'Nome (Ela)', 'Telefone (Ela)', 'Endereço', 'Numero ficha']
     
+    # Adicionando conversão segura e ordenação numérica para a coluna da ficha
+    localizacao['Numero ficha'] = pd.to_numeric(localizacao['Numero ficha'], errors='coerce')
+    localizacao = localizacao.sort_values(by='Numero ficha', ascending=True, na_position='last')
+    
+    if formato == 'pdf':
+        return dataframe_to_pdf(localizacao, 'Encontristas', 'Endereços')
+    
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        localizacao.to_excel(writer, index=False, sheet_name='Enderecos')
+        escrever_tabela_formatada(writer, 'Enderecos', localizacao, 'Encontristas', 'Endereços')
     output.seek(0)
     return output.getvalue()
 
@@ -48,11 +58,13 @@ def escrever_tabela_formatada(writer, sheet_name, df, titulo1, titulo2, startrow
     for col_idx, col in enumerate(df.columns):
         max_len = len(str(col))
         if nlinhas > 0:
-            max_len = max(max_len, *(df[col].astype(str).map(len)))
+            col_max = df.iloc[:, col_idx].astype(str).str.len().max()
+            if pd.notna(col_max):
+                max_len = max(max_len, int(col_max))
         worksheet.set_column(col_idx, col_idx, max_len + 2)
     return worksheet
 
-def gerar_camisas_encontristas(df_encontristas):
+def gerar_camisas_encontristas(df_encontristas, formato='excel'):
     if 'Cancelada?' in df_encontristas.columns:
         df_encontristas = df_encontristas[df_encontristas['Cancelada?'] == 'Não']
         
@@ -81,11 +93,37 @@ def gerar_camisas_encontristas(df_encontristas):
     resumo_camisas = lista_camisas['TAMANHO'].value_counts().reset_index()
     resumo_camisas.columns = ['TAMANHO', 'count']
     
+    if formato == 'pdf':
+        return dataframe_to_pdf([
+            ('Lista de Camisas', lista_camisas),
+            ('Resumo das Camisas', resumo_camisas),
+            ('Lista de Camisas por Casal', lista_camisas_casal)
+        ], 'Encontristas')
+    
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         escrever_tabela_formatada(writer, 'Lista', lista_camisas, 'Encontristas', 'Lista de Camisas')
         escrever_tabela_formatada(writer, 'Resumo', resumo_camisas, 'Encontristas', 'Resumo das Camisas')
         escrever_tabela_formatada(writer, 'Lista Casais', lista_camisas_casal, 'Encontristas', 'Lista de Camisas por Casal')
     
+    output.seek(0)
+    return output.getvalue()
+
+def gerar_lista_circulos_encontristas(df_encontristas, formato='excel'):
+    if 'Cancelada?' in df_encontristas.columns:
+        df_encontristas = df_encontristas[df_encontristas['Cancelada?'] == 'Não']
+        
+    circulos = df_encontristas[['Número da ficha:', 'Como Gostaria de ser chamado? ', 'Como Gostaria de ser chamada?', 'Endereço:']].copy()
+    circulos.columns = ['Numero Ficha', 'Nome Ele', 'Nome Ela', 'Endereço']
+    
+    circulos['Numero Ficha'] = pd.to_numeric(circulos['Numero Ficha'], errors='coerce')
+    circulos = circulos.sort_values(by='Numero Ficha', ascending=True, na_position='last')
+    
+    if formato == 'pdf':
+        return dataframe_to_pdf(circulos, 'Encontristas', 'Lista para Círculos')
+        
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        escrever_tabela_formatada(writer, 'Circulos', circulos, 'Encontristas', 'Lista para Círculos')
     output.seek(0)
     return output.getvalue()
