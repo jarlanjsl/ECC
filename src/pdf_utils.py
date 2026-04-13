@@ -41,16 +41,22 @@ def dataframe_to_pdf(df_or_list, titulo1, titulo2=""):
     </html>
     """
     
-    temp_html = "temp_report.html"
-    with open(temp_html, "w", encoding="utf-8") as f:
+    import tempfile
+    import pathlib
+    
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".html", mode="w", encoding="utf-8") as f:
         f.write(html_template)
+        temp_html = f.name
     
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
-            abs_path = os.path.abspath(temp_html)
-            page.goto(f"file:///{abs_path.replace(chr(92), '/')}")
+            
+            # pathlib takes care of turning absolute paths into proper file:/// URIs
+            page_url = pathlib.Path(temp_html).resolve().as_uri()
+            page.goto(page_url)
+            
             # Escrevendo PDF em orientação retrato ou paisagem dependendo do número de colunas do primeiro DF
             df_ref = lista_dfs[0][1]
             if len(df_ref.columns) > 5:

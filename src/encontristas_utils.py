@@ -113,8 +113,8 @@ def gerar_lista_circulos_encontristas(df_encontristas, formato='excel'):
     if 'Cancelada?' in df_encontristas.columns:
         df_encontristas = df_encontristas[df_encontristas['Cancelada?'] == 'Não']
         
-    circulos = df_encontristas[['Número da ficha:', 'Como Gostaria de ser chamado? ', 'Como Gostaria de ser chamada?', 'Endereço:']].copy()
-    circulos.columns = ['Numero Ficha', 'Nome Ele', 'Nome Ela', 'Endereço']
+    circulos = df_encontristas[['Número da ficha:', 'Como Gostaria de ser chamado? ', 'Tamanho Camisa (Ele):', 'Como Gostaria de ser chamada?', 'Tamanho Camisa (Ela):', 'Endereço:']].copy()
+    circulos.columns = ['Numero Ficha', 'Nome Ele', 'Camisa Ele', 'Nome Ela', 'Camisa Ela', 'Endereço']
     
     circulos['Numero Ficha'] = pd.to_numeric(circulos['Numero Ficha'], errors='coerce')
     circulos = circulos.sort_values(by='Numero Ficha', ascending=True, na_position='last')
