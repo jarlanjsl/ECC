@@ -7,7 +7,7 @@ from playwright.sync_api import sync_playwright
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
-def extrair_todos_dados_einscricao(email, senha):
+def extrair_todos_dados_einscricao(email, senha, data_inicial=None, data_final=None):
     """
     Aciona o robô do E-Inscrição, faz login persistente na validação,
     e exporta os 3 CSVs: encontreiros, encontristas, financeiro sequencialmente.
@@ -61,12 +61,21 @@ def extrair_todos_dados_einscricao(email, senha):
             except UnicodeDecodeError:
                 return pd.read_csv(path, sep=';', encoding='latin1', on_bad_lines='skip')
 
+        import urllib.parse
+        
         try:
+            query_params = []
+            if data_inicial:
+                query_params.append(f"start_date={urllib.parse.quote(data_inicial, safe='')}")
+            if data_final:
+                query_params.append(f"end_date={urllib.parse.quote(data_final, safe='')}")
+            query_str = "?" + "&".join(query_params) if query_params else ""
+
             # Encontreiros
             print("Baixando Encontreiros...")
-            page.goto("https://www.e-inscricao.com/eccdapazceara/encontreiroxviiecc/enrollments/beta#/")
+            page.goto(f"https://www.e-inscricao.com/eccdapazceara/encontreiroxviiecc/enrollments/beta#/{query_str}")
             page.wait_for_load_state("domcontentloaded")
-            page.wait_for_timeout(3000)
+            page.wait_for_timeout(5000)
             
             with page.expect_download(timeout=15000) as download_info:
                 page.get_by_text("Exportar Lista", exact=False).first.click()
@@ -74,9 +83,9 @@ def extrair_todos_dados_einscricao(email, senha):
 
             # Encontristas
             print("Baixando Encontristas...")
-            page.goto("https://www.e-inscricao.com/eccdapazceara/encontristaxviiecc/enrollments/beta#/")
+            page.goto(f"https://www.e-inscricao.com/eccdapazceara/encontristaxviiecc/enrollments/beta#/{query_str}")
             page.wait_for_load_state("domcontentloaded")
-            page.wait_for_timeout(3000)
+            page.wait_for_timeout(5000)
             
             with page.expect_download(timeout=15000) as download_info:
                 page.get_by_text("Exportar Lista", exact=False).first.click()
@@ -91,9 +100,15 @@ def extrair_todos_dados_einscricao(email, senha):
             page.get_by_label("Evento", exact=False).select_option(label="encontreiroXVIIECC")
             page.get_by_label("Filtro", exact=False).select_option(label="Pagas em")
             
-            campo_data = page.get_by_label("Data Inicial", exact=False)
-            campo_data.fill("01/01/2026")
-            campo_data.press("Enter")
+            if data_inicial:
+                campo_data_ini = page.get_by_label("Data Inicial", exact=False)
+                campo_data_ini.fill(data_inicial)
+                campo_data_ini.press("Enter")
+                
+            if data_final:
+                campo_data_fim = page.get_by_label("Data Final", exact=False)
+                campo_data_fim.fill(data_final)
+                campo_data_fim.press("Enter")
             
             page.get_by_role("button", name="Filtrar").click()
             page.wait_for_timeout(3000)
