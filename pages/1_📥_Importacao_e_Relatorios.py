@@ -15,11 +15,16 @@ st.title("📥 Importação e Geração de Relatórios")
 with st.expander("Sincronização Online (🤖 Robô E-Inscrição)", expanded=True):
     st.write("Acione o robô para baixar automaticamente Encontreiros, Encontristas e Financeiro:")
     
-    def executa_sincronizacao_total():
+    def executa_sincronizacao_total(data_ini=None, data_fim=None):
         if "einscricao_email" in st.secrets and "einscricao_senha" in st.secrets:
             from src.extrator_bot import extrair_todos_dados_einscricao
             with st.spinner("Rodando Automação para sincronização global... Aguarde!"):
-                resultado = extrair_todos_dados_einscricao(st.secrets["einscricao_email"], st.secrets["einscricao_senha"])
+                resultado = extrair_todos_dados_einscricao(
+                    st.secrets["einscricao_email"], 
+                    st.secrets["einscricao_senha"],
+                    data_inicial=data_ini,
+                    data_final=data_fim
+                )
                 
                 if resultado:
                     if resultado["encontreiros"] is not None:
@@ -34,9 +39,17 @@ with st.expander("Sincronização Online (🤖 Robô E-Inscrição)", expanded=T
                     st.error("Falha geral ao sincronizar dados. Inspecione o terminal e os logs.")
         else:
             st.warning("⚠️ Suas chaves secretas einscricao_email e einscricao_senha sumiram!")
+
+    col_d1, col_d2 = st.columns(2)
+    with col_d1:
+        dt_inicial = st.date_input("Data Inicial (Opcional)", value=None, format="DD/MM/YYYY")
+    with col_d2:
+        dt_final = st.date_input("Data Final (Opcional)", value=None, format="DD/MM/YYYY")
             
     if st.button("⏬ Sincronizar Tudo", use_container_width=True):
-        executa_sincronizacao_total()
+        str_dt_ini = dt_inicial.strftime("%d/%m/%Y") if dt_inicial else None
+        str_dt_fim = dt_final.strftime("%d/%m/%Y") if dt_final else None
+        executa_sincronizacao_total(str_dt_ini, str_dt_fim)
         
 st.divider()
 col_fmt1, col_fmt2 = st.columns([1, 3])
@@ -61,55 +74,69 @@ with aba1:
     with col3:
         file_sorteados = st.file_uploader("Sorteados (CSV) - Opcional", type=['csv'], key='f_sorteados')
 
-    df_inscricoes = st.session_state.get('df_encontreiros', None)
-    df_financeiro = st.session_state.get('df_financeiro', None)
-    df_sort = None
-    
-    if df_inscricoes is None and file_encontreiros is not None:
+    if file_encontreiros is not None:
         try:
             df_inscricoes = pd.read_csv(file_encontreiros, sep=';', encoding='latin-1')
             st.session_state['df_encontreiros'] = df_inscricoes
         except Exception as e:
             st.error(f"Erro no CSV de Encontreiros: {e}")
+    else:
+        df_inscricoes = st.session_state.get('df_encontreiros', None)
 
-    if df_financeiro is None and file_financeiro is not None:
+    if file_financeiro is not None:
         try:
             df_financeiro = pd.read_csv(file_financeiro, sep=';', encoding='utf-8-sig', on_bad_lines='skip')
             st.session_state['df_financeiro'] = df_financeiro
         except Exception as e:
             st.error(f"Erro no CSV de Financeiro: {e}")
+    else:
+        df_financeiro = st.session_state.get('df_financeiro', None)
             
     if file_sorteados is not None:
         df_sort = pd.read_csv(file_sorteados, sep=';')
+    else:
+        df_sort = None
 
-    if df_inscricoes is not None:
-        try:
-            st.success("Tabela de inscrições de Encontreiros carregada com sucesso!")
-            
-            st.subheader("Relatórios Disponíveis")
-            b_col1, b_col2, b_col3 = st.columns(3)
-            
-            with b_col1:
-                dados_equipes = gerar_lista_equipes(df_inscricoes, formato=formato_str)
-                st.download_button(
-                    label=f"Baixar Lista de Equipes", data=dados_equipes,
-                    file_name=f"lista_equipes_{agora}{extensao}", mime=mime_type
-                )
+    if df_inscricoes is not None or df_financeiro is not None or df_sort is not None:
+        # Validacoes visuais em bloco primeiro, independentemente de ter botoes
+        if df_inscricoes is not None:
+            st.success("✅ Tabela de Encontreiros em memória!")
+        if df_financeiro is not None:
+            st.success("✅ Tabela de Conta Financeira em memória!")
+        if df_sort is not None:
+            st.success("✅ Ocultar ganhadores ativado pela Tabela de Sorteados!")
+
+    if df_inscricoes is not None or df_financeiro is not None:
+        st.subheader("Relatórios Disponíveis")
+        
+        b_col1, b_col2, b_col3 = st.columns(3)
+        
+        if df_inscricoes is not None:
+            try:
+                with b_col1:
+                    dados_equipes = gerar_lista_equipes(df_inscricoes, formato=formato_str)
+                    st.download_button(
+                        label=f"Baixar Lista de Equipes", data=dados_equipes,
+                        file_name=f"lista_equipes_{agora}{extensao}", mime=mime_type
+                    )
+                    
+                    dados_camisas = gerar_todas_camisas(df_inscricoes, formato=formato_str)
+                    st.download_button(
+                        label=f"Baixar Lista de Camisas", data=dados_camisas,
+                        file_name=f"encontreiros_camisas_{agora}{extensao}", mime=mime_type
+                    )
                 
-                dados_camisas = gerar_todas_camisas(df_inscricoes, formato=formato_str)
-                st.download_button(
-                    label=f"Baixar Lista de Camisas", data=dados_camisas,
-                    file_name=f"encontreiros_camisas_{agora}{extensao}", mime=mime_type
-                )
-            
-            with b_col2:
-                dados_igrejas = gerar_analise_igrejas(df_inscricoes, formato=formato_str)
-                st.download_button(
-                    label=f"Baixar Análise de Igrejas", data=dados_igrejas,
-                    file_name=f"analise_por_igreja_{agora}{extensao}", mime=mime_type
-                )
+                with b_col2:
+                    dados_igrejas = gerar_analise_igrejas(df_inscricoes, formato=formato_str)
+                    st.download_button(
+                        label=f"Baixar Análise de Igrejas", data=dados_igrejas,
+                        file_name=f"analise_por_igreja_{agora}{extensao}", mime=mime_type
+                    )
+            except Exception as e:
+                st.error(f"Erro ao processar relatórios de Encontreiros: {e}")
                 
-            if df_financeiro is not None:
+        if df_financeiro is not None:
+            try:
                 with b_col3:
                     dados_pagamento = gerar_relacao_pagamento(df_financeiro, formato=formato_str)
                     st.download_button(
@@ -117,27 +144,26 @@ with aba1:
                         file_name=f"relacao_pagamento_{agora}{extensao}", mime=mime_type
                     )
                     
-                    dados_sorteio = gerar_lista_sorteio(df_inscricoes, df_financeiro, df_sort, formato=formato_str)
-                    st.download_button(
-                        label=f"Baixar Lista de Sorteio", data=dados_sorteio,
-                        file_name=f"lista_sorteio_{agora}{extensao}", mime=mime_type
-                    )
-
-        except Exception as e:
-            st.error(f"Erro ao processar arquivo(s): {e}")
-            if df_financeiro is not None:
-                st.write("Colunas encontradas no arquivo Financeiro:", list(df_financeiro.columns))
+                    if df_inscricoes is not None:
+                        dados_sorteio = gerar_lista_sorteio(df_inscricoes, df_financeiro, df_sort, formato=formato_str)
+                        st.download_button(
+                            label=f"Baixar Lista de Sorteio", data=dados_sorteio,
+                            file_name=f"lista_sorteio_{agora}{extensao}", mime=mime_type
+                        )
+            except Exception as e:
+                st.error(f"Erro ao processar relatórios de Financeiro/Sorteio: {e}")
 with aba2:
     st.header("Upload de Arquivos - Encontristas")
     file_encontristas = st.file_uploader("Encontristas (CSV)", type=['csv'], key='f_encontristas')
     
-    df_encontristas = st.session_state.get('df_encontristas', None)
-    if df_encontristas is None and file_encontristas is not None:
+    if file_encontristas is not None:
         try:
             df_encontristas = pd.read_csv(file_encontristas, sep=';', encoding='latin-1')
             st.session_state['df_encontristas'] = df_encontristas
         except Exception as e:
             st.error(f"Erro no CSV de Encontristas: {e}")
+    else:
+        df_encontristas = st.session_state.get('df_encontristas', None)
 
     if df_encontristas is not None:
         try:

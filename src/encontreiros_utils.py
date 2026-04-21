@@ -129,11 +129,16 @@ def gerar_lista_sorteio(df_inscricoes, df_financeiro, df_sorteados, formato='exc
     df_filtrado['Nome'] = df_filtrado['Nome'].str.strip().str.title()
     lista_sorteio['NOME'] = lista_sorteio['NOME'].str.strip().str.title()
     
+    def remove_accents(s):
+        return s.astype(str).str.normalize('NFKD').str.encode('ascii', errors='ignore').str.decode('utf-8')
+
+    lista_sorteio['NOME_MERGE'] = remove_accents(lista_sorteio['NOME']).str.upper()
+    df_filtrado['NOME_MERGE'] = remove_accents(df_filtrado['Nome']).str.upper()
+    
     lista_sorteio_completa = pd.merge(
         lista_sorteio, 
-        df_filtrado[['Nome', 'Nome Crachá (Ele):', 'Telefone (Ele)', 'Nome Crachá (Ela):', 'Telefone (Ela)', 'Igreja em que congregam:']],
-        left_on='NOME', 
-        right_on='Nome', 
+        df_filtrado[['NOME_MERGE', 'Nome', 'Nome Crachá (Ele):', 'Telefone (Ele)', 'Nome Crachá (Ela):', 'Telefone (Ela)', 'Igreja em que congregam:']],
+        on='NOME_MERGE', 
         how='left'
     )
     
@@ -150,10 +155,10 @@ def gerar_lista_sorteio(df_inscricoes, df_financeiro, df_sorteados, formato='exc
     lista_final = lista_sorteio_completa[['Nome Casal', 'Telefone (Ele)', 'Telefone (Ela)', 'Igreja em que congregam:']].copy()
     lista_final = lista_final.drop_duplicates(subset=['Nome Casal'])
     
-    lista_final['NOME_COMPARA'] = lista_final['Nome Casal'].str.upper().str.strip()
+    lista_final['NOME_COMPARA'] = remove_accents(lista_final['Nome Casal']).str.upper().str.strip()
     
     if df_sorteados is not None and not df_sorteados.empty:
-        df_sorteados['NOME_COMPARA'] = df_sorteados['Nome Casal'].str.upper().str.strip()
+        df_sorteados['NOME_COMPARA'] = remove_accents(df_sorteados['Nome Casal']).str.upper().str.strip()
         lista_final_disponivel = lista_final[~lista_final['NOME_COMPARA'].isin(df_sorteados['NOME_COMPARA'])].copy()
     else:
         lista_final_disponivel = lista_final.copy()
