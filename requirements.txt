@@ -4,4 +4,4 @@ openpyxl
 xlsxwriter
 streamlit
 playwright
-google-generativeai
+google-genai
