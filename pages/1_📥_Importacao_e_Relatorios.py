@@ -12,45 +12,6 @@ if not auth.check_password():
 
 st.title("📥 Importação e Geração de Relatórios")
 
-with st.expander("Sincronização Online (🤖 Robô E-Inscrição)", expanded=True):
-    st.write("Acione o robô para baixar automaticamente Encontreiros, Encontristas e Financeiro:")
-    
-    def executa_sincronizacao_total(data_ini=None, data_fim=None):
-        if "einscricao_email" in st.secrets and "einscricao_senha" in st.secrets:
-            from src.extrator_bot import extrair_todos_dados_einscricao
-            with st.spinner("Rodando Automação para sincronização global... Aguarde!"):
-                resultado = extrair_todos_dados_einscricao(
-                    st.secrets["einscricao_email"], 
-                    st.secrets["einscricao_senha"],
-                    data_inicial=data_ini,
-                    data_final=data_fim
-                )
-                
-                if resultado:
-                    if resultado["encontreiros"] is not None:
-                        st.session_state["df_encontreiros"] = resultado["encontreiros"]
-                    if resultado["encontristas"] is not None:
-                        st.session_state["df_encontristas"] = resultado["encontristas"]
-                    if resultado["financeiro"] is not None:
-                        st.session_state["df_financeiro"] = resultado["financeiro"]
-                        
-                    st.success("Bases de dados sincronizadas com sucesso!")
-                else:
-                    st.error("Falha geral ao sincronizar dados. Inspecione o terminal e os logs.")
-        else:
-            st.warning("⚠️ Suas chaves secretas einscricao_email e einscricao_senha sumiram!")
-
-    col_d1, col_d2 = st.columns(2)
-    with col_d1:
-        dt_inicial = st.date_input("Data Inicial (Opcional)", value=None, format="DD/MM/YYYY")
-    with col_d2:
-        dt_final = st.date_input("Data Final (Opcional)", value=None, format="DD/MM/YYYY")
-            
-    if st.button("⏬ Sincronizar Tudo", use_container_width=True):
-        str_dt_ini = dt_inicial.strftime("%d/%m/%Y") if dt_inicial else None
-        str_dt_fim = dt_final.strftime("%d/%m/%Y") if dt_final else None
-        executa_sincronizacao_total(str_dt_ini, str_dt_fim)
-        
 st.divider()
 col_fmt1, col_fmt2 = st.columns([1, 3])
 with col_fmt1:
@@ -65,14 +26,12 @@ aba1, aba2 = st.tabs(["Encontreiros", "Encontristas"])
 
 with aba1:
     st.header("Upload de Arquivos - Encontreiros")
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
     
     with col1:
         file_encontreiros = st.file_uploader("Encontreiros (CSV)", type=['csv'], key='f_encontreiros')
     with col2:
         file_financeiro = st.file_uploader("Conta Financeira (CSV)", type=['csv'], key='f_financeiro')
-    with col3:
-        file_sorteados = st.file_uploader("Sorteados (CSV) - Opcional", type=['csv'], key='f_sorteados')
 
     if file_encontreiros is not None:
         try:
@@ -91,20 +50,13 @@ with aba1:
             st.error(f"Erro no CSV de Financeiro: {e}")
     else:
         df_financeiro = st.session_state.get('df_financeiro', None)
-            
-    if file_sorteados is not None:
-        df_sort = pd.read_csv(file_sorteados, sep=';')
-    else:
-        df_sort = None
 
-    if df_inscricoes is not None or df_financeiro is not None or df_sort is not None:
+    if df_inscricoes is not None or df_financeiro is not None:
         # Validacoes visuais em bloco primeiro, independentemente de ter botoes
         if df_inscricoes is not None:
             st.success("✅ Tabela de Encontreiros em memória!")
         if df_financeiro is not None:
             st.success("✅ Tabela de Conta Financeira em memória!")
-        if df_sort is not None:
-            st.success("✅ Ocultar ganhadores ativado pela Tabela de Sorteados!")
 
     if df_inscricoes is not None or df_financeiro is not None:
         st.subheader("Relatórios Disponíveis")
@@ -143,15 +95,8 @@ with aba1:
                         label=f"Baixar Relação de Pagamento", data=dados_pagamento,
                         file_name=f"relacao_pagamento_{agora}{extensao}", mime=mime_type
                     )
-                    
-                    if df_inscricoes is not None:
-                        dados_sorteio = gerar_lista_sorteio(df_inscricoes, df_financeiro, df_sort, formato=formato_str)
-                        st.download_button(
-                            label=f"Baixar Lista de Sorteio", data=dados_sorteio,
-                            file_name=f"lista_sorteio_{agora}{extensao}", mime=mime_type
-                        )
             except Exception as e:
-                st.error(f"Erro ao processar relatórios de Financeiro/Sorteio: {e}")
+                st.error(f"Erro ao processar relatórios de Financeiro: {e}")
 with aba2:
     st.header("Upload de Arquivos - Encontristas")
     file_encontristas = st.file_uploader("Encontristas (CSV)", type=['csv'], key='f_encontristas')

@@ -118,62 +118,6 @@ def gerar_relacao_pagamento(df_financeiro, formato='excel'):
     output.seek(0)
     return output.getvalue()
 
-def gerar_lista_sorteio(df_inscricoes, df_financeiro, df_sorteados, formato='excel'):
-    df_filtrado = filtrar_ativos(df_inscricoes).copy()
-    df_filtrado_financeiro = df_financeiro[df_financeiro['Tipo'] == 'C'].copy()
-    
-    df_filtrado_financeiro['Nome do inscrito'] = df_filtrado_financeiro['Nome do inscrito'].str.title()
-    sorteio_array = df_filtrado_financeiro['Nome do inscrito'].unique()
-    lista_sorteio = pd.DataFrame(sorteio_array, columns=['NOME'])
-    
-    df_filtrado['Nome'] = df_filtrado['Nome'].str.strip().str.title()
-    lista_sorteio['NOME'] = lista_sorteio['NOME'].str.strip().str.title()
-    
-    def remove_accents(s):
-        return s.astype(str).str.normalize('NFKD').str.encode('ascii', errors='ignore').str.decode('utf-8')
-
-    lista_sorteio['NOME_MERGE'] = remove_accents(lista_sorteio['NOME']).str.upper()
-    df_filtrado['NOME_MERGE'] = remove_accents(df_filtrado['Nome']).str.upper()
-    
-    lista_sorteio_completa = pd.merge(
-        lista_sorteio, 
-        df_filtrado[['NOME_MERGE', 'Nome', 'Nome Crachá (Ele):', 'Telefone (Ele)', 'Nome Crachá (Ela):', 'Telefone (Ela)', 'Igreja em que congregam:']],
-        on='NOME_MERGE', 
-        how='left'
-    )
-    
-    # Se faltarem Nomes Crachá por causa de dados incompletos, preencher com Vazio para evitar erro ao concatenar
-    lista_sorteio_completa['Nome Crachá (Ele):'] = lista_sorteio_completa['Nome Crachá (Ele):'].fillna('')
-    lista_sorteio_completa['Nome Crachá (Ela):'] = lista_sorteio_completa['Nome Crachá (Ela):'].fillna('')
-
-    lista_sorteio_completa['Nome Casal'] = (
-        lista_sorteio_completa['Nome Crachá (Ele):'].str.title() + 
-        ' e ' + 
-        lista_sorteio_completa['Nome Crachá (Ela):'].str.title()
-    )
-    
-    lista_final = lista_sorteio_completa[['Nome Casal', 'Telefone (Ele)', 'Telefone (Ela)', 'Igreja em que congregam:']].copy()
-    lista_final = lista_final.drop_duplicates(subset=['Nome Casal'])
-    
-    lista_final['NOME_COMPARA'] = remove_accents(lista_final['Nome Casal']).str.upper().str.strip()
-    
-    if df_sorteados is not None and not df_sorteados.empty:
-        df_sorteados['NOME_COMPARA'] = remove_accents(df_sorteados['Nome Casal']).str.upper().str.strip()
-        lista_final_disponivel = lista_final[~lista_final['NOME_COMPARA'].isin(df_sorteados['NOME_COMPARA'])].copy()
-    else:
-        lista_final_disponivel = lista_final.copy()
-        
-    lista_final_disponivel.drop(columns=['NOME_COMPARA'], inplace=True, errors='ignore')
-    
-    if formato == 'pdf':
-        return dataframe_to_pdf(lista_final_disponivel, 'Eventos', 'Lista para Sorteio')
-    
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        escrever_tabela_formatada(writer, 'Sorteio', lista_final_disponivel, 'Eventos', 'Lista para Sorteio')
-    output.seek(0)
-    return output.getvalue()
-
 def gerar_analise_igrejas(df_inscricoes, formato='excel'):
     df_filtrado = filtrar_ativos(df_inscricoes).copy()
     df_filtrado['Igreja em que congregam:'] = df_filtrado['Igreja em que congregam:'].astype(str).str.strip().str.title()
