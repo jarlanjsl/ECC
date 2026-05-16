@@ -67,7 +67,7 @@ DADOS DISPONÍVEIS:
 
 if "chat_messages" not in st.session_state:
     st.session_state["chat_messages"] = [
-        {"role": "assistant", "content": "Olá! Sou o seu Assistente de IA. Já avaliei as planilhas carregadas. Você pode me perguntar coisas como: *'Quem são os casais da equipe de limpeza?'* ou *'Quantos encontristas da Paróquia da Paz ainda não pagaram?'*. O que vamos investigar agora?"}
+        {"role": "assistant", "content": "Olá! Sou o seu Assistente de IA. Já avaliei as planilhas carregadas. Você pode me perguntar coisas como: *'Quem são os casais da equipe de circulos?'* ou *'Quantos encontristas ainda não pagaram?'*. O que vamos investigar agora?"}
     ]
 
 # Renderizar mensagens anteriores
