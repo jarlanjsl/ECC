@@ -3,5 +3,5 @@ ipykernel
 openpyxl
 xlsxwriter
 streamlit
-playwright
 google-genai
+xhtml2pdf
