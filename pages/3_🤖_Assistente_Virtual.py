@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import src.auth as auth
 
 st.set_page_config(page_title="Assistente Virtual", layout="wide")
@@ -28,7 +29,7 @@ if not gemini_api_key:
     st.info("Para usar o assistente, adicione sua chave de API na barra lateral ou no arquivo secrets.toml.")
     st.stop()
 
-genai.configure(api_key=gemini_api_key)
+client = genai.Client(api_key=gemini_api_key)
 
 # Carrega os dataframes da sessão corrente
 dfs_context = []
@@ -84,21 +85,22 @@ if prompt := st.chat_input("Ex: 'Identifique na lista de finanças quem ainda n�
     with st.chat_message("assistant"):
         with st.spinner("Analisando e raciocinando sobre as planilhas..."):
             try:
-                # Criando o modelo Gemini 2.5 Flash (versão mais recente e ideal para grandes blocos de texto)
-                model = genai.GenerativeModel(
-                    model_name='gemini-2.5-flash',
-                    system_instruction=system_instruction
-                )
-                
                 # Prepara histórico pro formato Gemini (descartando o primeiro que é o hello default local)
                 history = []
                 for m in st.session_state.chat_messages[1:-1]:
                     if m["role"] == "user":
-                        history.append({"role": "user", "parts": [m["content"]]})
+                        history.append(types.Content(role="user", parts=[types.Part.from_text(text=m["content"])]))
                     elif m["role"] == "assistant":
-                        history.append({"role": "model", "parts": [m["content"]]})
+                        history.append(types.Content(role="model", parts=[types.Part.from_text(text=m["content"])]))
 
-                chat = model.start_chat(history=history)
+                # Criando o chat e aplicando a system_instruction
+                chat = client.chats.create(
+                    model='gemini-2.5-flash',
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_instruction
+                    ),
+                    history=history
+                )
                 response = chat.send_message(prompt)
                 
                 resposta_texto = response.text
