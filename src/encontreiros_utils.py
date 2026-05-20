@@ -116,20 +116,47 @@ def gerar_relacao_pagamento(df_financeiro, formato='excel'):
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         escrever_tabela_formatada(writer, 'Pagamentos', relacao_pagamento, 'Financeiro', 'Relação de Pagamentos')
     output.seek(0)
-    return output.getvalue()
 
-def gerar_analise_igrejas(df_inscricoes, formato='excel'):
+
+def gerar_relatorio_status(df_inscricoes, formato='excel'):
     df_filtrado = filtrar_ativos(df_inscricoes).copy()
-    df_filtrado['Igreja em que congregam:'] = df_filtrado['Igreja em que congregam:'].astype(str).str.strip().str.title()
-    analise_igreja = df_filtrado['Igreja em que congregam:'].value_counts().reset_index()
-    analise_igreja.columns = ['IGREJA', 'QUANTIDADE DE CASAIS']
-    analise_igreja = analise_igreja.sort_values(by='QUANTIDADE DE CASAIS', ascending=False)
+    
+    colunas_necessarias = [
+        'Nome Crachá (Ele):', 'Telefone (Ele)', 
+        'Nome Crachá (Ela):', 'Telefone (Ela)', 
+        'Status', 'Em qual equipe deseja trabalhar :'
+    ]
+    
+    # Verifica quais colunas realmente existem para evitar erros caso a planilha mude
+    colunas_presentes = [col for col in colunas_necessarias if col in df_filtrado.columns]
+    status_df = df_filtrado[colunas_presentes].copy()
+    
+    # Renomear colunas se elas existirem
+    mapa_colunas = {
+        'Nome Crachá (Ele):': 'NOME (ELE)',
+        'Telefone (Ele)': 'TELEFONE (ELE)',
+        'Nome Crachá (Ela):': 'NOME (ELA)',
+        'Telefone (Ela)': 'TELEFONE (ELA)',
+        'Status': 'STATUS',
+        'Em qual equipe deseja trabalhar :': 'EQUIPE DESEJADA'
+    }
+    status_df.rename(columns=mapa_colunas, inplace=True)
+    
+    # Formatar nomes
+    for col in ['NOME (ELE)', 'NOME (ELA)']:
+        if col in status_df.columns:
+            status_df[col] = status_df[col].astype(str).str.title()
+            
+    # Ordenar por status e equipe
+    cols_sort = [c for c in ['STATUS', 'EQUIPE DESEJADA'] if c in status_df.columns]
+    if cols_sort:
+        status_df = status_df.sort_values(by=cols_sort)
     
     if formato == 'pdf':
-        return dataframe_to_pdf(analise_igreja, 'Encontreiros', 'Análise por Igrejas')
+        return dataframe_to_pdf(status_df, 'Encontreiros', 'Relatório de Status')
     
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        escrever_tabela_formatada(writer, 'Analise_Igrejas', analise_igreja, 'Encontreiros', 'Análise por Igrejas')
+        escrever_tabela_formatada(writer, 'Status', status_df, 'Encontreiros', 'Relatório de Status')
     output.seek(0)
     return output.getvalue()
