@@ -79,10 +79,10 @@ with aba1:
                     )
                 
                 with b_col2:
-                    dados_igrejas = gerar_analise_igrejas(df_inscricoes, formato=formato_str)
+                    dados_status = gerar_relatorio_status(df_inscricoes, formato=formato_str)
                     st.download_button(
-                        label=f"Baixar Análise de Igrejas", data=dados_igrejas,
-                        file_name=f"analise_por_igreja_{agora}{extensao}", mime=mime_type
+                        label=f"Baixar Relatório de Status", data=dados_status,
+                        file_name=f"encontreiros_status_{agora}{extensao}", mime=mime_type
                     )
             except Exception as e:
                 st.error(f"Erro ao processar relatórios de Encontreiros: {e}")
