@@ -118,9 +118,15 @@ with aba2:
             b_col1, b_col2 = st.columns(2)
             
             with b_col1:
-                dados_lista_ent = gerar_lista_encontristas(df_encontristas, formato=formato_str)
+                dados_lista_completa = gerar_lista_encontristas(df_encontristas, formato=formato_str)
                 st.download_button(
-                    label=f"Baixar Lista Encontristas", data=dados_lista_ent,
+                    label=f"Baixar Lista Completa", data=dados_lista_completa,
+                    file_name=f"lista_completa_encontristas_{agora}{extensao}", mime=mime_type
+                )
+                
+                dados_lista_res = gerar_lista_encontristas_resumida(df_encontristas, formato=formato_str)
+                st.download_button(
+                    label=f"Baixar Lista Encontristas", data=dados_lista_res,
                     file_name=f"lista_encontristas_{agora}{extensao}", mime=mime_type
                 )
                 
