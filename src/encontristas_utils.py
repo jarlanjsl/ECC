@@ -127,3 +127,68 @@ def gerar_lista_circulos_encontristas(df_encontristas, formato='excel'):
         escrever_tabela_formatada(writer, 'Circulos', circulos, 'Encontristas', 'Lista para Círculos')
     output.seek(0)
     return output.getvalue()
+
+def gerar_lista_encontristas_resumida(df_encontristas, formato='excel'):
+    if 'Cancelada?' in df_encontristas.columns:
+        df_encontristas = df_encontristas[df_encontristas['Cancelada?'] == 'Não']
+        
+    # Colunas desejadas e seus mapeamentos robustos
+    col_map = {
+        'Número da ficha:': ['Número da ficha:', 'Número da ficha', 'Numero da ficha:', 'Numero da ficha'],
+        'Convidado por:': ['Convidado por:', 'Convidado por'],
+        'Telefone:': ['Telefone:', 'Telefone'],
+        'Como Gostaria de ser chamado?': ['Como Gostaria de ser chamado? ', 'Como Gostaria de ser chamado?'],
+        'Telefone (Ele):': ['Telefone (Ele):', 'Telefone (Ele)'],
+        'Como Gostaria de ser chamada?': ['Como Gostaria de ser chamada?', 'Como Gostaria de ser chamada? '],
+        'Telefone (Ela):': ['Telefone (Ela):', 'Telefone (Ela)']
+    }
+    
+    rename_dict = {
+        'Número da ficha:': 'Ficha',
+        'Convidado por:': 'Padrinhos',
+        'Telefone:': 'Telefone Padrinhos',
+        'Como Gostaria de ser chamado?': 'Ele',
+        'Telefone (Ele):': 'Telefone (Ele):',
+        'Como Gostaria de ser chamada?': 'Ela',
+        'Telefone (Ela):': 'Telefone (Ela):'
+    }
+    
+    final_cols = []
+    final_rename = {}
+    
+    for standard_name, candidates in col_map.items():
+        found = False
+        for cand in candidates:
+            if cand in df_encontristas.columns:
+                final_cols.append(cand)
+                final_rename[cand] = rename_dict[standard_name]
+                found = True
+                break
+        if not found:
+            for col in df_encontristas.columns:
+                if col.strip().lower() == standard_name.strip().lower():
+                    final_cols.append(col)
+                    final_rename[col] = rename_dict[standard_name]
+                    found = True
+                    break
+            if not found:
+                df_encontristas[standard_name] = ""
+                final_cols.append(standard_name)
+                final_rename[standard_name] = rename_dict[standard_name]
+                
+    df_res = df_encontristas[final_cols].copy()
+    df_res = df_res.rename(columns=final_rename)
+    
+    # Conversão segura e ordenação numérica para a coluna da ficha
+    if 'Ficha' in df_res.columns:
+        df_res['Ficha'] = pd.to_numeric(df_res['Ficha'], errors='coerce')
+        df_res = df_res.sort_values(by='Ficha', ascending=True, na_position='last')
+        
+    if formato == 'pdf':
+        return dataframe_to_pdf(df_res, 'Encontristas', 'Lista de Encontristas')
+        
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        escrever_tabela_formatada(writer, 'Encontristas', df_res, 'Encontristas', 'Lista de Encontristas')
+    output.seek(0)
+    return output.getvalue()
