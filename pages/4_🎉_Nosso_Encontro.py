@@ -1,9 +1,5 @@
 import streamlit as st
-import os
-import base64
 from pathlib import Path
-from PIL import Image, ImageOps
-from streamlit_pdf_viewer import pdf_viewer 
 
 # ============================================================
 # 🎉 Nosso Encontro - Página pública (sem autenticação)
@@ -11,12 +7,7 @@ from streamlit_pdf_viewer import pdf_viewer
 
 st.set_page_config(page_title="Nosso Encontro - ECC", page_icon="🎉", layout="wide")
 
-# ── Caminhos dos assets ──────────────────────────────────────
-ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
-LIVRAO_DIR = ASSETS_DIR / "livrao"
-MOMENTOS_DIR = ASSETS_DIR / "momentos"
-
-# ── CSS personalizado ────────────────────────────────────────
+# ── CSS personalizado (Mantido idêntico ao seu original) ─────
 st.markdown("""
 <style>
     /* ===== ESCONDER MENU / SIDEBAR ===== */
@@ -51,60 +42,30 @@ st.markdown("""
         padding: 0.75rem 1.5rem !important;
     }
 
-    /* Grid de fotos */
-    .photo-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 16px;
-        padding: 8px 0;
-    }
-    .photo-card {
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        background: var(--background-color, #fff);
-    }
-    .photo-card:hover {
-        transform: translateY(-6px);
-        box-shadow: 0 12px 32px rgba(0,0,0,0.2);
-    }
-    .photo-card img {
-        width: 100%;
-        height: 260px;
-        object-fit: cover;
-        display: block;
-    }
-    /* PDF container */
-    .pdf-container {
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 4px 24px rgba(0,0,0,0.1);
-        margin: 1rem 0;
-    }
-
-    /* ===== BOTÃO DE DOWNLOAD DESTACADO ===== */
+    /* ===== BOTÃO DE DOWNLOAD DESTACADO (HTML PERSONALIZADO) ===== */
     .download-section {
         display: flex;
         justify-content: center;
         margin: 1.5rem 0;
     }
-    /* Estiliza o botão de download do Streamlit */
-    [data-testid="stDownloadButton"] > button {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    .btn-download-custom {
+        display: inline-block;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: #fff !important;
-        font-size: 1.25rem !important;
-        font-weight: 700 !important;
-        padding: 0.85rem 2.5rem !important;
-        border: none !important;
-        border-radius: 12px !important;
-        box-shadow: 0 4px 18px rgba(102, 126, 234, 0.4) !important;
-        transition: transform 0.2s ease, box-shadow 0.2s ease !important;
-        cursor: pointer !important;
+        font-size: 1.25rem;
+        font-weight: 700;
+        padding: 0.85rem 2.5rem;
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 4px 18px rgba(102, 126, 234, 0.4);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        text-decoration: none;
+        text-align: center;
+        cursor: pointer;
     }
-    [data-testid="stDownloadButton"] > button:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 8px 28px rgba(102, 126, 234, 0.55) !important;
+    .btn-download-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 28px rgba(102, 126, 234, 0.55);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -117,91 +78,95 @@ st.markdown('<p class="hero-subtitle">Reviva os melhores momentos do nosso ECC</
 aba_livrao, aba_momentos = st.tabs(["📖 Livrão", "📸 Momentos"])
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# ABA 1 – LIVRÃO (Renderização Responsiva para Celular)
+# FUNÇÃO AUXILIAR - LINKS DIRETOS DO GOOGLE DRIVE
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+def obter_link_direto_drive(url_compartilhada):
+    """Transforma o link de visualização do Drive em link direto de renderização"""
+    if "drive.google.com" in url_compartilhada:
+        try:
+            id_arquivo = url_compartilhada.split("/d/")[1].split("/")[0]
+            # Formato de alta performance para renderizar imagens direto no navegador do cliente
+            return f"https://lh3.googleusercontent.com/d/{id_arquivo}"
+        except IndexError:
+            pass
+    return url_compartilhada
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ABA 1 – LIVRÃO (Hospedado no Google Drive)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 with aba_livrao:
     st.header("📖 Livrão do ECC")
     st.write("Confira o Livrão completo do nosso encontro. Você também pode baixá-lo para guardar de lembrança!")
 
-    # Buscar o primeiro arquivo PDF na pasta livrao
-    pdf_files = list(LIVRAO_DIR.glob("*.pdf"))
-
-    if pdf_files:
-        pdf_path = pdf_files[0]  
-        pdf_bytes = pdf_path.read_bytes()
-
-        # Botão de download
-        st.markdown('<div class="download-section">', unsafe_allow_html=True)
-        col_spacer1, col_btn, col_spacer2 = st.columns([1, 2, 1])
-        with col_btn:
-            st.download_button(
-                label="⬇️  Baixar o Livrão (PDF)",
-                data=pdf_bytes,
-                file_name=pdf_path.name,
-                mime="application/pdf",
-                width="stretch",
-            )
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        st.divider()  
-
-        # 🚀 AJUSTADO: Renderização Fluida/Responsiva
+    # 🚨 PASSO 1: Cole aqui o link de compartilhamento do seu PDF no Google Drive
+    # IMPORTANTE: No Google Drive, mude o acesso do arquivo para "Qualquer pessoa com o link pode ler"
+    LINK_COMPARTILHADO_PDF_DRIVE = "https://drive.google.com/file/d/1JJSR8-H14teOWaHx20JSm-zjegTa_0_B/view?usp=sharing"
+    
+    if "SEU_ID_DO_PDF_AQUI" not in LINK_COMPARTILHADO_PDF_DRIVE:
         try:
-            # Ao NÃO passar o parâmetro 'width', ou deixando-o nulo, 
-            # o componente força o PDF a encolher e caber na largura da tela do celular.
-            pdf_viewer(
-                input=str(pdf_path)
-            )
-        except Exception as e:
-            st.error(f"Erro ao renderizar o leitor de PDF: {e}")
+            id_pdf = LINK_COMPARTILHADO_PDF_DRIVE.split("/d/")[1].split("/")[0]
             
+            # Link direto para download do PDF
+            url_download_pdf = f"https://drive.google.com/uc?export=download&id={id_pdf}"
+            
+            # Link para visualização interna em iframe (usa o leitor do próprio Drive, super leve)
+            url_preview_pdf = f"https://drive.google.com/file/d/{id_pdf}/preview"
+
+            # Botão de download estilizado com seu CSS, apontando para fora do Streamlit
+            st.markdown(f"""
+            <div class="download-section">
+                <a class="btn-download-custom" href="{url_download_pdf}" target="_blank">
+                    ⬇️   Baixar o Livrão (PDF)
+                </a>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.divider()  
+
+            # Renderização síncrona delegada ao navegador do cliente (Substitui o pdf_viewer local)
+            componente_pdf = f'<iframe src="{url_preview_pdf}" width="100%" height="800px" allow="autoplay"></iframe>'
+            st.iframe(componente_pdf, height=815)
+            
+        except Exception as e:
+            st.error(f"Erro ao processar o link do PDF do Google Drive: {e}")
     else:
-        st.info(
-            "📂 Nenhum arquivo PDF encontrado.\n\n"
-            f"Coloque o PDF do Livrão na pasta:\n\n`{LIVRAO_DIR}`"
-        )
+        st.warning("⚠️ Por favor, configure o link do seu PDF do Google Drive na variável 'LINK_COMPARTILHADO_PDF_DRIVE'")
+
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# ABA 2 – MOMENTOS (Galeria Nativa com Correção de Orientação)
+# ABA 2 – MOMENTOS (Galeria Estável e Ultraleve)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 with aba_momentos:
     st.header("📸 Momentos do ECC")
     st.write("Uma galeria com os momentos mais especiais do nosso encontro!")
 
-    EXTENSOES_IMAGEM = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+    LINKS_GOOGLE_DRIVE = [
+        "https://drive.google.com/file/d/1LGoDxEIrOV2lNE0dUKhfhFMfWmhmh5cX/view?usp=sharing",
+        "https://drive.google.com/file/d/1FqmVMTXB7y_cLkLJuALLLElNNRJnZQ8d/view?usp=sharing",
+        "https://drive.google.com/file/d/1PXjiscfHBUpAr-2sZl1ORlIn41KLpYif/view?usp=sharing",
+        "https://drive.google.com/file/d/1tGlKv5CQ6BZXYYKPbSKC9nCeJC-PXycr/view?usp=sharing",
+        "https://drive.google.com/file/d/1OavfEp-UMGHKlVE_YOfuoxanyEiTrnPl/view?usp=sharing",
+        "https://drive.google.com/file/d/189hBtIkutHLFzt2myDfiI8Y4Akrvv0cQ/view?usp=sharing"
+    ]
 
-    fotos = sorted([
-        f for f in MOMENTOS_DIR.iterdir()
-        if f.is_file() and f.suffix.lower() in EXTENSOES_IMAGEM
-    ]) if MOMENTOS_DIR.exists() else []
-
-    if fotos:
-        # Cria a grade de 3 colunas
+    if LINKS_GOOGLE_DRIVE:
         colunas = st.columns(3, gap="medium")
         
-        for i, foto in enumerate(fotos):
+        for i, link_original in enumerate(LINKS_GOOGLE_DRIVE):
             with colunas[i % 3]:
-                try:
-                    # 1. Abre a imagem usando o Pillow
-                    img = Image.open(foto)
-                    
-                    # 2. Corrige automaticamente a rotação com base nos metadados Exif do celular
-                    img_corrigida = ImageOps.exif_transpose(img)
-                    
-                    # 3. Exibe a imagem já na orientação correta (vertical)
-                    st.image(
-                        img_corrigida, 
-                        width="stretch"
-                    )
-                except Exception as e:
-                    # Se alguma imagem falhar ou estiver corrompida, exibe o erro discretamente
-                    st.error(f"Erro ao processar {foto.name}: {e}")
+                # Transforma o link em URL direta de imagem compatível com navegadores
+                url_direta_imagem = obter_link_direto_drive(link_original)
+                
+                # 🚀 O GRANDE TRUQUE: Passar a URL direto para o st.image
+                # O servidor do Streamlit não baixa nada! Quem faz o download é o celular do usuário.
+                st.image(
+                    url_direta_imagem, 
+                    width='stretch'
+                )
                 
         st.divider()
-        st.caption(f"📷 {len(fotos)} foto(s) encontrada(s)")
+        st.caption(f"📷 {len(LINKS_GOOGLE_DRIVE)} foto(s) renderizada(s) via CDN estável do Google.")
     else:
-        st.info(
-            "📂 Nenhuma foto encontrada.\n\n"
-            f"Coloque suas fotos na pasta correspondente:\n\n`{MOMENTOS_DIR}`"
-        )
+        st.info("📂 Nenhuma foto configurada na lista do Google Drive.")
