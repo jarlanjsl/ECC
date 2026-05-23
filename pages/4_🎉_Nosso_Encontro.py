@@ -2,6 +2,8 @@ import streamlit as st
 import os
 import base64
 from pathlib import Path
+from PIL import Image, ImageOps
+from streamlit_pdf_viewer import pdf_viewer 
 
 # ============================================================
 # 🎉 Nosso Encontro - Página pública (sem autenticação)
@@ -17,6 +19,14 @@ MOMENTOS_DIR = ASSETS_DIR / "momentos"
 # ── CSS personalizado ────────────────────────────────────────
 st.markdown("""
 <style>
+    /* ===== ESCONDER MENU / SIDEBAR ===== */
+    [data-testid="stSidebar"],
+    [data-testid="collapsedControl"],
+    #MainMenu,
+    header[data-testid="stHeader"] button[kind="header"] {
+        display: none !important;
+    }
+
     /* Header bonito */
     .hero-title {
         text-align: center;
@@ -33,6 +43,14 @@ st.markdown("""
         color: #888;
         margin-bottom: 2rem;
     }
+
+    /* ===== ABAS MAIORES ===== */
+    [data-baseweb="tab-list"] button[data-baseweb="tab"] {
+        font-size: 1.35rem !important;
+        font-weight: 700 !important;
+        padding: 0.75rem 1.5rem !important;
+    }
+
     /* Grid de fotos */
     .photo-grid {
         display: grid;
@@ -64,11 +82,29 @@ st.markdown("""
         box-shadow: 0 4px 24px rgba(0,0,0,0.1);
         margin: 1rem 0;
     }
-    /* Botão de download estilizado */
+
+    /* ===== BOTÃO DE DOWNLOAD DESTACADO ===== */
     .download-section {
         display: flex;
         justify-content: center;
         margin: 1.5rem 0;
+    }
+    /* Estiliza o botão de download do Streamlit */
+    [data-testid="stDownloadButton"] > button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: #fff !important;
+        font-size: 1.25rem !important;
+        font-weight: 700 !important;
+        padding: 0.85rem 2.5rem !important;
+        border: none !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 18px rgba(102, 126, 234, 0.4) !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+        cursor: pointer !important;
+    }
+    [data-testid="stDownloadButton"] > button:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 28px rgba(102, 126, 234, 0.55) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -81,8 +117,9 @@ st.markdown('<p class="hero-subtitle">Reviva os melhores momentos do nosso ECC</
 aba_livrao, aba_momentos = st.tabs(["📖 Livrão", "📸 Momentos"])
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# ABA 1 – LIVRÃO (Renderização e Download de PDF)
+# ABA 1 – LIVRÃO (Renderização Responsiva para Celular)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 with aba_livrao:
     st.header("📖 Livrão do ECC")
     st.write("Confira o Livrão completo do nosso encontro. Você também pode baixá-lo para guardar de lembrança!")
@@ -91,7 +128,7 @@ with aba_livrao:
     pdf_files = list(LIVRAO_DIR.glob("*.pdf"))
 
     if pdf_files:
-        pdf_path = pdf_files[0]  # Usa o primeiro PDF encontrado
+        pdf_path = pdf_files[0]  
         pdf_bytes = pdf_path.read_bytes()
 
         # Botão de download
@@ -103,67 +140,68 @@ with aba_livrao:
                 data=pdf_bytes,
                 file_name=pdf_path.name,
                 mime="application/pdf",
-                use_container_width=True,
+                width="stretch",
             )
         st.markdown('</div>', unsafe_allow_html=True)
+        
+        st.divider()  
 
-        # Renderizar PDF no navegador via iframe com base64
-        base64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
-        pdf_display = f"""
-        <div class="pdf-container">
-            <iframe
-                src="data:application/pdf;base64,{base64_pdf}"
-                width="100%"
-                height="800px"
-                type="application/pdf"
-                style="border: none;">
-            </iframe>
-        </div>
-        """
-        st.markdown(pdf_display, unsafe_allow_html=True)
+        # 🚀 AJUSTADO: Renderização Fluida/Responsiva
+        try:
+            # Ao NÃO passar o parâmetro 'width', ou deixando-o nulo, 
+            # o componente força o PDF a encolher e caber na largura da tela do celular.
+            pdf_viewer(
+                input=str(pdf_path)
+            )
+        except Exception as e:
+            st.error(f"Erro ao renderizar o leitor de PDF: {e}")
+            
     else:
         st.info(
             "📂 Nenhum arquivo PDF encontrado.\n\n"
             f"Coloque o PDF do Livrão na pasta:\n\n`{LIVRAO_DIR}`"
         )
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ABA 2 – MOMENTOS (Galeria Nativa com Correção de Orientação)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# ABA 2 – MOMENTOS (Galeria de Fotos)
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 with aba_momentos:
     st.header("📸 Momentos do ECC")
     st.write("Uma galeria com os momentos mais especiais do nosso encontro!")
 
-    # Extensões suportadas
     EXTENSOES_IMAGEM = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 
-    # Coletar todas as imagens da pasta
     fotos = sorted([
         f for f in MOMENTOS_DIR.iterdir()
         if f.is_file() and f.suffix.lower() in EXTENSOES_IMAGEM
     ]) if MOMENTOS_DIR.exists() else []
 
     if fotos:
-        # Gerar as imagens em base64 e montar o HTML do grid
-        cards_html = ""
-        for foto in fotos:
-            img_bytes = foto.read_bytes()
-            ext = foto.suffix.lower().replace(".", "")
-            if ext == "jpg":
-                ext = "jpeg"
-            b64 = base64.b64encode(img_bytes).decode("utf-8")
-            cards_html += f"""
-            <div class="photo-card">
-                <img src="data:image/{ext};base64,{b64}" alt="{foto.stem}" loading="lazy"/>
-            </div>
-            """
-
-        st.markdown(f'<div class="photo-grid">{cards_html}</div>', unsafe_allow_html=True)
-
+        # Cria a grade de 3 colunas
+        colunas = st.columns(3, gap="medium")
+        
+        for i, foto in enumerate(fotos):
+            with colunas[i % 3]:
+                try:
+                    # 1. Abre a imagem usando o Pillow
+                    img = Image.open(foto)
+                    
+                    # 2. Corrige automaticamente a rotação com base nos metadados Exif do celular
+                    img_corrigida = ImageOps.exif_transpose(img)
+                    
+                    # 3. Exibe a imagem já na orientação correta (vertical)
+                    st.image(
+                        img_corrigida, 
+                        width="stretch"
+                    )
+                except Exception as e:
+                    # Se alguma imagem falhar ou estiver corrompida, exibe o erro discretamente
+                    st.error(f"Erro ao processar {foto.name}: {e}")
+                
         st.divider()
         st.caption(f"📷 {len(fotos)} foto(s) encontrada(s)")
     else:
         st.info(
             "📂 Nenhuma foto encontrada.\n\n"
-            f"Coloque suas fotos (`.jpg`, `.png`, `.webp`, `.gif`) na pasta:\n\n`{MOMENTOS_DIR}`"
+            f"Coloque suas fotos na pasta correspondente:\n\n`{MOMENTOS_DIR}`"
         )

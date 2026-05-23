@@ -5,3 +5,4 @@ xlsxwriter
 streamlit
 google-genai
 xhtml2pdf
+streamlit-pdf-viewer
