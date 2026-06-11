@@ -13,6 +13,10 @@ if not auth.check_password():
 st.title("📥 Importação e Geração de Relatórios")
 
 st.divider()
+
+# Mobile upload tip
+st.info("📱 **Dica para celular:** Ao abrir o seletor de arquivos, escolha **'Fotos e Vídeos'** → **'Gerenciador de Arquivos'** e selecione o arquivo CSV. Toque simples no arquivo já envia automaticamente.")
+
 col_fmt1, col_fmt2 = st.columns([1, 3])
 with col_fmt1:
     formato_saida = st.radio("Formato de Exportação:", options=["Excel", "PDF"])
@@ -29,30 +33,38 @@ with aba1:
     col1, col2 = st.columns(2)
     
     with col1:
-        file_encontreiros = st.file_uploader("Encontreiros (CSV)", type=['csv'], key='f_encontreiros')
+        file_encontreiros = st.file_uploader("Encontreiros (CSV)", key='f_encontreiros')
+        
     with col2:
-        file_financeiro = st.file_uploader("Conta Financeira (CSV)", type=['csv'], key='f_financeiro')
+        file_financeiro = st.file_uploader("Conta Financeira (CSV)", key='f_financeiro')
 
     if file_encontreiros is not None:
-        try:
-            df_inscricoes = pd.read_csv(file_encontreiros, sep=';', encoding='latin-1')
-            st.session_state['df_encontreiros'] = df_inscricoes
-        except Exception as e:
-            st.error(f"Erro no CSV de Encontreiros: {e}")
+        if not file_encontreiros.name.lower().endswith('.csv'):
+            st.error(f"Erro: O arquivo '{file_encontreiros.name}' não é um CSV válido.")
+            file_encontreiros = None
+        else:
+            try:
+                df_inscricoes = pd.read_csv(file_encontreiros, sep=';', encoding='latin-1')
+                st.session_state['df_encontreiros'] = df_inscricoes
+            except Exception as e:
+                st.error(f"Erro no CSV de Encontreiros: {e}")
     else:
         df_inscricoes = st.session_state.get('df_encontreiros', None)
 
     if file_financeiro is not None:
-        try:
-            df_financeiro = pd.read_csv(file_financeiro, sep=';', encoding='utf-8-sig', on_bad_lines='skip')
-            st.session_state['df_financeiro'] = df_financeiro
-        except Exception as e:
-            st.error(f"Erro no CSV de Financeiro: {e}")
+        if not file_financeiro.name.lower().endswith('.csv'):
+            st.error(f"Erro: O arquivo '{file_financeiro.name}' não é um CSV válido.")
+            file_financeiro = None
+        else:
+            try:
+                df_financeiro = pd.read_csv(file_financeiro, sep=';', encoding='utf-8-sig', on_bad_lines='skip')
+                st.session_state['df_financeiro'] = df_financeiro
+            except Exception as e:
+                st.error(f"Erro no CSV de Financeiro: {e}")
     else:
         df_financeiro = st.session_state.get('df_financeiro', None)
 
     if df_inscricoes is not None or df_financeiro is not None:
-        # Validacoes visuais em bloco primeiro, independentemente de ter botoes
         if df_inscricoes is not None:
             st.success("✅ Tabela de Encontreiros em memória!")
         if df_financeiro is not None:
@@ -97,16 +109,21 @@ with aba1:
                     )
             except Exception as e:
                 st.error(f"Erro ao processar relatórios de Financeiro: {e}")
+
 with aba2:
     st.header("Upload de Arquivos - Encontristas")
-    file_encontristas = st.file_uploader("Encontristas (CSV)", type=['csv'], key='f_encontristas')
+    file_encontristas = st.file_uploader("Encontristas (CSV)", key='f_encontristas')
     
     if file_encontristas is not None:
-        try:
-            df_encontristas = pd.read_csv(file_encontristas, sep=';', encoding='latin-1')
-            st.session_state['df_encontristas'] = df_encontristas
-        except Exception as e:
-            st.error(f"Erro no CSV de Encontristas: {e}")
+        if not file_encontristas.name.lower().endswith('.csv'):
+            st.error(f"Erro: O arquivo '{file_encontristas.name}' não é um CSV válido.")
+            file_encontristas = None
+        else:
+            try:
+                df_encontristas = pd.read_csv(file_encontristas, sep=';', encoding='latin-1')
+                st.session_state['df_encontristas'] = df_encontristas
+            except Exception as e:
+                st.error(f"Erro no CSV de Encontristas: {e}")
     else:
         df_encontristas = st.session_state.get('df_encontristas', None)
 

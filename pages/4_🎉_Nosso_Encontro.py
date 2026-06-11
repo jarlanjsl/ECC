@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 from pathlib import Path
 
 # ============================================================
@@ -101,7 +102,7 @@ with aba_livrao:
 
     # 🚨 PASSO 1: Cole aqui o link de compartilhamento do seu PDF no Google Drive
     # IMPORTANTE: No Google Drive, mude o acesso do arquivo para "Qualquer pessoa com o link pode ler"
-    LINK_COMPARTILHADO_PDF_DRIVE = "https://drive.google.com/file/d/1JJSR8-H14teOWaHx20JSm-zjegTa_0_B/view?usp=sharing"
+    LINK_COMPARTILHADO_PDF_DRIVE = "https://drive.google.com/file/d/1IH4ulCRxrb6w39TRUqVeAzGd8HqOeNyP/view?usp=sharing"
     
     if "SEU_ID_DO_PDF_AQUI" not in LINK_COMPARTILHADO_PDF_DRIVE:
         try:
@@ -126,7 +127,7 @@ with aba_livrao:
 
             # Renderização síncrona delegada ao navegador do cliente (Substitui o pdf_viewer local)
             componente_pdf = f'<iframe src="{url_preview_pdf}" width="100%" height="800px" allow="autoplay"></iframe>'
-            st.iframe(componente_pdf, height=815)
+            components.html(componente_pdf, height=815)
             
         except Exception as e:
             st.error(f"Erro ao processar o link do PDF do Google Drive: {e}")
@@ -148,7 +149,28 @@ with aba_momentos:
         "https://drive.google.com/file/d/1PXjiscfHBUpAr-2sZl1ORlIn41KLpYif/view?usp=sharing",
         "https://drive.google.com/file/d/1tGlKv5CQ6BZXYYKPbSKC9nCeJC-PXycr/view?usp=sharing",
         "https://drive.google.com/file/d/1OavfEp-UMGHKlVE_YOfuoxanyEiTrnPl/view?usp=sharing",
-        "https://drive.google.com/file/d/189hBtIkutHLFzt2myDfiI8Y4Akrvv0cQ/view?usp=sharing"
+        "https://drive.google.com/file/d/189hBtIkutHLFzt2myDfiI8Y4Akrvv0cQ/view?usp=sharing",
+        "https://drive.google.com/file/d/1STO0aUJ8efyeYv-ms_jHqiy2Mpkq9q6X/view?usp=sharing",
+        "https://drive.google.com/file/d/1risdStpJFMZsl7yHRDbG43HeZyCKfLa2/view?usp=sharing",
+        "https://drive.google.com/file/d/1jVRCEcyQFLDH5cBKRzhIdQeIN04QZM63/view?usp=sharing",
+        "https://drive.google.com/file/d/1r-eodDNQ1h8AoQLKuat9U-ekNFSIrM3d/view?usp=sharing",
+        "https://drive.google.com/file/d/1Vzkowj4wPEXSFWSDpm1emHxv_fR--z3Y/view?usp=sharing",
+        "https://drive.google.com/file/d/1x3MThDz-BzrbguCHJ9LblDoo5i6nnkpg/view?usp=sharing",
+        "https://drive.google.com/file/d/1K8krDHoC7B_yWkJV2Sisq2l5HeNLKNl7/view?usp=sharing",
+        "https://drive.google.com/file/d/1r53xmSRrPitBMoXYgz5Ijm4hOt7E5cf5/view?usp=sharing",
+        "https://drive.google.com/file/d/15AiwjPfOcbVjbRuKLkRWOKjNyXkYbOuh/view?usp=sharing",
+        "https://drive.google.com/file/d/1rSP_VCeEnjnxuYM7xrxRJjk5DaJMjQMn/view?usp=sharing",
+        "https://drive.google.com/file/d/1BTiOhebhCCK-UZe1tEEba1d33oRhue6q/view?usp=sharing",
+        "https://drive.google.com/file/d/10RS1ctP-RmKzZqj8zIZF_fH2RTXtm-GN/view?usp=sharing",
+        "https://drive.google.com/file/d/1ouy_vl2DuA27sr9pAiFjq2Sbgl-FYFDU/view?usp=sharing",
+        "https://drive.google.com/file/d/1mtNM6iKi5nw-vIoorE8GsLoDdwFCf5dN/view?usp=sharing",
+        "https://drive.google.com/file/d/13NxWETxjIKMjh-YbEYfact8THuKNcxWN/view?usp=sharing",
+        "https://drive.google.com/file/d/118cAlVe1vTXFTETnYv12dI4DGnyDetGV/view?usp=sharing",
+        "https://drive.google.com/file/d/1eIKL87Qv2zYJzSZt69fxcWZjvj_wwcHm/view?usp=sharing",
+        "https://drive.google.com/file/d/1yM-TcSKnsMv481mmx2IjQ05taAraz2H9/view?usp=sharing",
+        "https://drive.google.com/file/d/1_ToqbnHE2o_7v-Zomd51SJa9qZgHlLqI/view?usp=sharing",
+        "https://drive.google.com/file/d/1pt5KLy7a-mg4WiDgBYOVVUpKTDxyieFK/view?usp=sharing",
+        "https://drive.google.com/file/d/17BvnbtB55rXl1kYEPRzrO4ROi8rl5y7_/view?usp=sharing"
     ]
 
     if LINKS_GOOGLE_DRIVE:
@@ -163,7 +185,7 @@ with aba_momentos:
                 # O servidor do Streamlit não baixa nada! Quem faz o download é o celular do usuário.
                 st.image(
                     url_direta_imagem, 
-                    width='stretch'
+                    use_column_width=True
                 )
                 
         st.divider()
